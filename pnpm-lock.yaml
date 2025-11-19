@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       remark:
-        specifier: ^15.0.0
+        specifier: ^15.0.1
         version: 15.0.1
       unist-util-visit:
         specifier: ^5.0.0

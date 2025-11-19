@@ -1,6 +1,6 @@
 {
   "name": "@entro314labs/remark-mdd",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Remark plugins and validation for MDD (Markdown Document) format - semantic document layer for professional business documents",
   "main": "index.js",
   "type": "module",
@@ -40,7 +40,7 @@
     "unified",
     "mdast"
   ],
-  "author": "Dominikos Pritis <idominik@outlook.com>",
+  "author": "Dominikos Pritis <idominikos@outlook.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
