@@ -1,6 +1,6 @@
 # remark-mdd
 
-[![npm version](https://badge.fury.io/js/@entro314labs%2Fremark-mdd.svg)](https://www.npmjs.com/package/@entro314labs/remark-mdd)
+[![npm version](https://badge.fury.io/js/@markdownkit%2Fremark-mdd.svg)](https://www.npmjs.com/package/@markdownkit/remark-mdd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **[remark](https://github.com/remarkjs/remark) plugins for MDD (Markdown Document) format** - Transform semantic markdown into professional business documents.
@@ -9,7 +9,7 @@
 
 MDD (Markdown Document) is a semantic document layer that bridges AI-generated markdown with professional business document output. It extends standard markdown with minimal semantic directives to preserve document structure and intent across formats (HTML, PDF, DOCX).
 
-**This package provides the core remark plugins and validation library.** For CLI tools, see [@entro314labs/mdd](https://www.npmjs.com/package/@entro314labs/mdd).
+**This package provides the core remark plugins and validation library.** For CLI tools, see [@markdownkit/mdd](https://www.npmjs.com/package/@markdownkit/mdd).
 
 ## Features
 
@@ -23,11 +23,11 @@ MDD (Markdown Document) is a semantic document layer that bridges AI-generated m
 ## Installation
 
 ```bash
-npm install @entro314labs/remark-mdd
+npm install @markdownkit/remark-mdd
 # or
-pnpm add @entro314labs/remark-mdd
+pnpm add @markdownkit/remark-mdd
 # or
-yarn add @entro314labs/remark-mdd
+yarn add @markdownkit/remark-mdd
 ```
 
 ## Usage
@@ -35,10 +35,10 @@ yarn add @entro314labs/remark-mdd
 ### Basic Usage
 
 ```javascript
-import { remark } from 'remark';
-import remarkMddDocumentStructure from '@entro314labs/remark-mdd/plugins/document-structure';
-import remarkMddTextFormatting from '@entro314labs/remark-mdd/plugins/text-formatting';
-import remarkHtml from 'remark-html';
+import { remark } from "remark";
+import remarkMddDocumentStructure from "@markdownkit/remark-mdd/plugins/document-structure";
+import remarkMddTextFormatting from "@markdownkit/remark-mdd/plugins/text-formatting";
+import remarkHtml from "remark-html";
 
 const processor = remark()
   .use(remarkMddDocumentStructure)
@@ -65,14 +65,14 @@ console.log(String(result));
 import {
   remarkMddDocumentStructure,
   remarkMddTextFormatting,
-  remarkMdxConditional
-} from '@entro314labs/remark-mdd';
+  remarkMdxConditional,
+} from "@markdownkit/remark-mdd";
 ```
 
 ### With Validation
 
 ```javascript
-import { validateDocument } from '@entro314labs/remark-mdd/validator';
+import { validateDocument } from "@markdownkit/remark-mdd/validator";
 
 const content = `---
 title: My Invoice
@@ -86,7 +86,7 @@ date: 2024-12-15
 const validation = validateDocument(content);
 
 if (!validation.valid) {
-  console.error('Validation errors:', validation.errors);
+  console.error("Validation errors:", validation.errors);
 }
 ```
 
@@ -96,13 +96,13 @@ if (!validation.valid) {
 import type {
   MDDFrontmatter,
   DirectiveType,
-  ValidationResult
-} from '@entro314labs/remark-mdd/types';
+  ValidationResult,
+} from "@markdownkit/remark-mdd/types";
 
 const frontmatter: MDDFrontmatter = {
-  title: 'My Document',
-  'document-type': 'business-letter',
-  date: '2024-12-15'
+  title: "My Document",
+  "document-type": "business-letter",
+  date: "2024-12-15",
 };
 ```
 
@@ -164,23 +164,23 @@ The package provides multiple export paths for different use cases:
 
 ```javascript
 // Main export (all plugins)
-import * from '@entro314labs/remark-mdd';
+import * from '@markdownkit/remark-mdd';
 
 // Individual plugins
-import remarkMddDocumentStructure from '@entro314labs/remark-mdd/plugins/document-structure';
-import remarkMddTextFormatting from '@entro314labs/remark-mdd/plugins/text-formatting';
-import remarkMdxConditional from '@entro314labs/remark-mdd/plugins/mdx-conditional';
+import remarkMddDocumentStructure from '@markdownkit/remark-mdd/plugins/document-structure';
+import remarkMddTextFormatting from '@markdownkit/remark-mdd/plugins/text-formatting';
+import remarkMdxConditional from '@markdownkit/remark-mdd/plugins/mdx-conditional';
 
 // Validation
-import { validateDocument } from '@entro314labs/remark-mdd/validator';
-import { validateDirectiveEndMarker } from '@entro314labs/remark-mdd/plugin-validator';
+import { validateDocument } from '@markdownkit/remark-mdd/validator';
+import { validateDirectiveEndMarker } from '@markdownkit/remark-mdd/plugin-validator';
 
 // Schema
-import schema from '@entro314labs/remark-mdd/schema';
-import requirements from '@entro314labs/remark-mdd/schema/requirements';
+import schema from '@markdownkit/remark-mdd/schema';
+import requirements from '@markdownkit/remark-mdd/schema/requirements';
 
 // TypeScript types
-import type { MDDFrontmatter, ValidationResult } from '@entro314labs/remark-mdd/types';
+import type { MDDFrontmatter, ValidationResult } from '@markdownkit/remark-mdd/types';
 ```
 
 ## Validation
@@ -188,14 +188,14 @@ import type { MDDFrontmatter, ValidationResult } from '@entro314labs/remark-mdd/
 The package includes comprehensive document validation:
 
 ```javascript
-import { validateDocument } from '@entro314labs/remark-mdd/validator';
+import { validateDocument } from "@markdownkit/remark-mdd/validator";
 
 const result = validateDocument(content, {
   validateFrontmatterFlag: true,
   validateDirectivesFlag: true,
   validateRequirementsFlag: true,
   validateClassesFlag: true,
-  strict: false
+  strict: false,
 });
 
 console.log(result);
@@ -222,8 +222,8 @@ console.log(result);
 JSON Schema definitions are included for IDE integration and validation:
 
 ```javascript
-import schema from '@entro314labs/remark-mdd/schema';
-import requirements from '@entro314labs/remark-mdd/schema/requirements';
+import schema from "@markdownkit/remark-mdd/schema";
+import requirements from "@markdownkit/remark-mdd/schema/requirements";
 
 // Use with AJV, JSON Schema validators, etc.
 ```
@@ -233,7 +233,7 @@ import requirements from '@entro314labs/remark-mdd/schema/requirements';
 ```json
 {
   "yaml.schemas": {
-    "node_modules/@entro314labs/remark-mdd/schema/mdd-document.schema.json#/definitions/frontmatter": "*.mdd"
+    "node_modules/@markdownkit/remark-mdd/schema/mdd-document.schema.json#/definitions/frontmatter": "*.mdd"
   }
 }
 ```
@@ -261,39 +261,42 @@ import type {
   DirectiveMatch,
 
   // Requirements
-  DocumentTypeRequirements
-} from '@entro314labs/remark-mdd/types';
+  DocumentTypeRequirements,
+} from "@markdownkit/remark-mdd/types";
 ```
 
 ## Use Cases
 
-### markdownfix Integration
+### markdownkit Integration
 
 ```javascript
 // .remarkrc.js
 export default {
   plugins: [
     // ... other plugins
-    (await import('@entro314labs/remark-mdd/plugins/document-structure')).default,
-    (await import('@entro314labs/remark-mdd/plugins/text-formatting')).default,
-  ]
+    (await import("@markdownkit/remark-mdd/plugins/document-structure"))
+      .default,
+    (await import("@markdownkit/remark-mdd/plugins/text-formatting")).default,
+  ],
 };
 ```
 
 ### Custom Build Tool
 
 ```javascript
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkMddDocumentStructure from '@entro314labs/remark-mdd/plugins/document-structure';
-import remarkMddTextFormatting from '@entro314labs/remark-mdd/plugins/text-formatting';
-import { validateDocument } from '@entro314labs/remark-mdd/validator';
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkMddDocumentStructure from "@markdownkit/remark-mdd/plugins/document-structure";
+import remarkMddTextFormatting from "@markdownkit/remark-mdd/plugins/text-formatting";
+import { validateDocument } from "@markdownkit/remark-mdd/validator";
 
 async function processDocument(content) {
   // Validate first
   const validation = validateDocument(content);
   if (!validation.valid) {
-    throw new Error(`Validation failed: ${validation.errors.map(e => e.message).join(', ')}`);
+    throw new Error(
+      `Validation failed: ${validation.errors.map((e) => e.message).join(", ")}`,
+    );
   }
 
   // Process with remark
@@ -310,7 +313,10 @@ async function processDocument(content) {
 ### Anasa Knowledge Base Integration
 
 ```javascript
-import { remarkMddDocumentStructure, remarkMddTextFormatting } from '@entro314labs/remark-mdd';
+import {
+  remarkMddDocumentStructure,
+  remarkMddTextFormatting,
+} from "@markdownkit/remark-mdd";
 
 // Add MDD support to your editor pipeline
 editor.use(remarkMddDocumentStructure);
@@ -343,7 +349,7 @@ Each document type has specific required and recommended frontmatter fields and 
 For command-line usage with preview and validation tools, install the main package:
 
 ```bash
-npm install -g @entro314labs/mdd
+npm install -g @markdownkit/mdd
 
 # Preview documents
 mdd-preview document.mdd
@@ -352,7 +358,7 @@ mdd-preview document.mdd
 mdd-validate document.mdd
 ```
 
-See [@entro314labs/mdd](https://www.npmjs.com/package/@entro314labs/mdd) for CLI documentation.
+See [@markdownkit/mdd](https://www.npmjs.com/package/@markdownkit/mdd) for CLI documentation.
 
 ## Documentation
 
@@ -362,8 +368,8 @@ See [@entro314labs/mdd](https://www.npmjs.com/package/@entro314labs/mdd) for CLI
 
 ## Related Packages
 
-- **[@entro314labs/mdd](https://www.npmjs.com/package/@entro314labs/mdd)** - CLI tools for MDD (preview, validate)
-- **[@entro314labs/markdownfix](https://www.npmjs.com/package/@entro314labs/markdownfix)** - Markdown linter/formatter with MDD support
+- **[@markdownkit/mdd](https://www.npmjs.com/package/@markdownkit/mdd)** - CLI tools for MDD (preview, validate)
+- **[@markdownkit/markdownkit](https://www.npmjs.com/package/@markdownkit/markdownkit)** - Markdown linter/formatter with MDD support
 - **[Anasa](https://github.com/entro314-labs/anasa)** - Knowledge base with MDD integration (planned)
 
 ## Contributing

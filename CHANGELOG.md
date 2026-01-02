@@ -1,12 +1,12 @@
 # Changelog
 
-All notable changes to @entro314labs/remark-mdd.
+All notable changes to @markdownkit/remark-mdd.
 
 ## [0.1.0] - 2025-10-18
 
 ### Added
 
-- **Initial release** - Extracted from @entro314labs/mdd v0.0.7
+- **Initial release** - Extracted from @markdownkit/mdd v0.0.7
 - Core remark plugins:
   - `remark-mdd-document-structure` - Process semantic directives
   - `remark-mdd-text-formatting` - Handle professional typography
@@ -39,20 +39,22 @@ All notable changes to @entro314labs/remark-mdd.
 
 ### Migration
 
-If you were using `@entro314labs/mdd` for plugins only:
+If you were using `@markdownkit/mdd` for plugins only:
 
 **Before:**
+
 ```javascript
-import { remarkMddDocumentStructure } from '@entro314labs/mdd';
+import { remarkMddDocumentStructure } from "@markdownkit/mdd";
 // or
-import remarkMddDocumentStructure from '@entro314labs/mdd/plugins/remark-mdd-document-structure.js';
+import remarkMddDocumentStructure from "@markdownkit/mdd/plugins/remark-mdd-document-structure.js";
 ```
 
 **After:**
+
 ```javascript
-import { remarkMddDocumentStructure } from '@entro314labs/remark-mdd';
+import { remarkMddDocumentStructure } from "@markdownkit/remark-mdd";
 // or
-import remarkMddDocumentStructure from '@entro314labs/remark-mdd/plugins/document-structure';
+import remarkMddDocumentStructure from "@markdownkit/remark-mdd/plugins/document-structure";
 ```
 
 ### Breaking Changes
