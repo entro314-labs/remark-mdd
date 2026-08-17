@@ -52,32 +52,7 @@ export default function remarkMddTextFormatting() {
       return
     }
 
-    // Process text formatting in all text nodes
-    visit(tree, 'text', (node, index, parent) => {
-      if (!node.value) return
-
-      const originalText = node.value
-      let hasFormatting = false
-
-      // Check if text contains any formatting
-      for (const pattern of Object.values(TEXT_PATTERNS)) {
-        pattern.lastIndex = 0
-        if (pattern.test(originalText)) {
-          hasFormatting = true
-          break
-        }
-      }
-
-      if (!hasFormatting) return
-
-      // Process formatting and create new nodes
-      const newNodes = processTextFormatting(originalText)
-
-      if (newNodes.length > 1) {
-        // Replace single text node with multiple formatted nodes
-        parent.children.splice(index, 1, ...newNodes)
-      }
-    })
+    transformTextNodes(tree)
 
     // Process heading structure and numbering
     processHeadingStructure(tree)
@@ -87,10 +62,34 @@ export default function remarkMddTextFormatting() {
   }
 }
 
+function transformTextNodes(node) {
+  if (!Array.isArray(node.children)) {
+    return
+  }
+
+  node.children = node.children.flatMap((child) => {
+    if (child.type !== 'text' || !child.value) {
+      transformTextNodes(child)
+      return [child]
+    }
+
+    for (const pattern of Object.values(TEXT_PATTERNS)) {
+      pattern.lastIndex = 0
+      if (pattern.test(child.value)) {
+        return processTextFormatting(child.value)
+      }
+    }
+    return [child]
+  })
+}
+
 /**
  * Process text formatting and return array of nodes
  */
 function processTextFormatting(text) {
+  for (const pattern of Object.values(TEXT_PATTERNS)) {
+    pattern.lastIndex = 0
+  }
   const nodes = []
   let currentIndex = 0
   const workingText = text
@@ -148,6 +147,12 @@ function processTextFormatting(text) {
 
   // Process matches and build nodes
   for (const formatMatch of allMatches) {
+    // Patterns can overlap (for example quote content containing another MDD
+    // token). The earliest match owns its source range; nested text remains
+    // literal inside that transformation instead of being emitted twice.
+    if (formatMatch.start < currentIndex) {
+      continue
+    }
     // Add text before the match
     if (formatMatch.start > currentIndex) {
       const beforeText = workingText.slice(currentIndex, formatMatch.start)

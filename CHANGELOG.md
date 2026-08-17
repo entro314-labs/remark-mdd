@@ -2,6 +2,17 @@
 
 All notable changes to @markdownkit/remark-mdd.
 
+## [2.2.3] - 2026-06-18
+
+### Fixed
+
+- **`./validator` is now browser/bundler-safe.** It loaded its JSON Schema via
+  `fs.readFileSync(fileURLToPath(import.meta.url) + …)`, which threw on import/use in a browser or a
+  Vite/esbuild renderer (no `node:fs`/`node:path`/`node:url`). The two schemas are now `import`ed
+  statically (`with { type: 'json' }`, Node ≥24), so the validator has no `node:*` runtime dependency
+  and runs identically in Node and the browser. Validation behaviour and the schema files shipped in
+  the package are unchanged.
+
 ## [0.1.0] - 2025-10-18
 
 ### Added

@@ -1,56 +1,20 @@
 /**
- * MDD Document Structure Plugin
- *
- * Transforms semantic directives into LaTeX-style markup that preserves document intent
- * across output formats (HTML, PDF, DOCX).
- *
- * Semantic directives handled:
- * - ::letterhead ... :: - Company/organization header (semantic, not just styled text)
- * - ::signature-block ... :: - Signature lines (maintains structure across formats)
- * - ::header ... :: / ::footer ... :: - Page headers/footers
- * - ::contact-info ... :: - Contact details block
- * - ::page-break :: - Force page break
- * - ::: section-break ::: - Section divider
- * - {.semantic-class} - CSS class annotations for styling hints
- *
- * Philosophy: Preserve document *intent* (letterhead), not just *appearance* (bold text).
- * This enables high-fidelity conversion to PDF/DOCX while maintaining semantic structure.
- *
- * Architecture: Stage 1 of two-stage conversion (Markdown → LaTeX → Output format)
+ * Preserve MDD document directives as semantic HTML containers without
+ * flattening the Markdown AST contained by each directive.
  */
 
 import { visit } from 'unist-util-visit'
 
-/**
- * Document structure patterns
- */
-const STRUCTURE_PATTERNS = {
-  letterhead: /^::letterhead$/,
-  signatureBlock: /^::signature-block$/,
-  pageBreak: /^::page-break$/,
-  pageBreakInline: /^::page-break\s*::$/,
-  header: /^::header$/,
-  footer: /^::footer$/,
-  contactInfo: /^::contact-info$/,
-  sectionBreak: /^::: section-break$/,
-  sectionBreakInline: /^:::\s*section-break\s*:::$/,
-  directiveEnd: /^::$/,
-  sectionEnd: /^:::$/,
-}
+const BLOCK_DIRECTIVES = new Map([
+  ['letterhead', 'letterhead'],
+  ['signature-block', 'signature'],
+  ['header', 'header'],
+  ['footer', 'footer'],
+  ['contact-info', 'contactinfo'],
+])
 
-/**
- * MDD document structure plugin
- *
- * Core transformation: ::directive blocks → \begin{directive}...\end{directive} LaTeX markers
- *
- * Why LaTeX intermediate format?
- * - Preserves semantic meaning (letterhead remains letterhead in HTML, PDF, DOCX)
- * - Enables pandoc conversion to high-quality PDF/DOCX
- * - Separates structure (directives) from presentation (styling)
- */
 export default function remarkMddDocumentStructure() {
   return function transformer(tree, file) {
-    // Only process .mdd files (MDD-specific semantic directives)
     if (!file.path?.endsWith('.mdd')) {
       return
     }
@@ -60,469 +24,200 @@ export default function remarkMddDocumentStructure() {
   }
 }
 
-/**
- * Process document structure elements
- */
-function processDocumentStructure(tree) {
-  const structureElements = []
-
-  // Find all structure markers
-  visit(tree, 'paragraph', (node, index, parent) => {
-    if (!node.children || node.children.length === 0) return
-
-    // Get text from all children (handles bold/italic/etc)
-    const allText = node.children
-      .map((child) => {
-        if (child.type === 'text') return child.value
-        if (child.children) {
-          return child.children.map((c) => c.value ?? '').join('')
-        }
-        return ''
-      })
-      .join('')
-
-    const text = allText.trim()
-    const firstLine = text.split('\n')[0].trim()
-    const lastLine = text.split('\n').pop().trim()
-
-    if (STRUCTURE_PATTERNS.pageBreakInline.test(text)) {
-      structureElements.push({
-        type: 'pageBreak',
-        node,
-        index,
-        parent,
-        text: allText,
-      })
-      return
-    }
-
-    if (STRUCTURE_PATTERNS.sectionBreakInline.test(text)) {
-      structureElements.push({
-        type: 'sectionBreak',
-        node,
-        index,
-        parent,
-        text: allText,
-      })
-      return
-    }
-
-    // Check for start markers (::letterhead, ::header, etc)
-    for (const [type, pattern] of Object.entries(STRUCTURE_PATTERNS)) {
-      if (pattern.test(firstLine)) {
-        structureElements.push({
-          type,
-          node,
-          index,
-          parent,
-          text: allText,
-        })
-        break
-      }
-    }
-
-    // Also check if this paragraph contains an end marker on last line
-    if (
-      STRUCTURE_PATTERNS.directiveEnd.test(lastLine) ||
-      STRUCTURE_PATTERNS.sectionEnd.test(lastLine)
-    ) {
-      const endType = lastLine === '::' ? 'directiveEnd' : 'sectionEnd'
-      structureElements.push({
-        type: endType,
-        node,
-        index,
-        parent,
-        text: allText,
-      })
-    }
-  })
-
-  // Process structure elements in pairs (start/end)
-  processStructureElements(structureElements)
+function textLeaves(node, leaves = []) {
+  if (node?.type === 'text') {
+    leaves.push(node)
+  }
+  for (const child of node?.children ?? []) {
+    textLeaves(child, leaves)
+  }
+  return leaves
 }
 
-/**
- * Process structure elements into document blocks
- */
-function processStructureElements(elements) {
-  for (let i = 0; i < elements.length; i++) {
-    const startElement = elements[i]
+function nodeText(node) {
+  return textLeaves(node)
+    .map((leaf) => leaf.value)
+    .join('')
+}
 
-    // Skip end markers - they're processed with their start markers
-    if (startElement.type === 'directiveEnd' || startElement.type === 'sectionEnd') {
+function paragraphIsEmpty(node) {
+  return node.type === 'paragraph' && nodeText(node).trim() === ''
+}
+
+function removeEmptyTextLeaves(node) {
+  if (!Array.isArray(node.children)) {
+    return
+  }
+  for (const child of node.children) {
+    removeEmptyTextLeaves(child)
+  }
+  node.children = node.children.filter((child) => child.type !== 'text' || child.value !== '')
+}
+
+function cloneWithoutOpeningMarker(node, directive) {
+  const clone = structuredClone(node)
+  const first = textLeaves(clone)[0]
+  if (first) {
+    first.value = first.value.replace(new RegExp(`^::${directive}(?:\\r?\\n|$)`, 'u'), '')
+  }
+  removeEmptyTextLeaves(clone)
+  return clone
+}
+
+function cloneWithoutEndMarker(node, marker = '::') {
+  const clone = structuredClone(node)
+  const leaves = textLeaves(clone)
+  const last = leaves.at(-1)
+  if (last) {
+    last.value = last.value.replace(new RegExp(`(?:\\r?\\n)?${marker}\\s*$`, 'u'), '')
+  }
+  removeEmptyTextLeaves(clone)
+  return clone
+}
+
+function pushUnlessEmpty(nodes, node) {
+  if (!paragraphIsEmpty(node)) {
+    nodes.push(node)
+  }
+}
+
+function semanticContainer(className, children) {
+  return {
+    type: 'blockquote',
+    children,
+    data: {
+      hName: 'div',
+      hProperties: { className: [className], 'data-mdd-directive': className },
+    },
+  }
+}
+
+function pageBreakNode() {
+  return {
+    type: 'paragraph',
+    children: [],
+    data: {
+      hName: 'div',
+      hProperties: { className: ['page-break'], 'data-mdd-directive': 'page-break' },
+    },
+  }
+}
+
+function sectionBreakNode() {
+  return {
+    type: 'thematicBreak',
+    data: {
+      hProperties: { className: ['section-break'], 'data-mdd-directive': 'section-break' },
+    },
+  }
+}
+
+function processDocumentStructure(tree) {
+  if (!Array.isArray(tree.children)) {
+    return
+  }
+
+  const input = tree.children
+  const output = []
+
+  for (let index = 0; index < input.length; index++) {
+    const node = input[index]
+    if (node.type !== 'paragraph') {
+      output.push(node)
       continue
     }
 
-    // Find corresponding end marker
-    const endElement = findEndMarker(startElement, elements, i)
-
-    // Create document structure element
-    createDocumentElement(startElement, endElement)
-  }
-}
-
-/**
- * Find corresponding end marker for a start element
- */
-function findEndMarker(startElement, elements, startIndex) {
-  const endType = getEndMarkerType(startElement.type)
-  if (!endType) return null
-
-  // Check if the end marker is in the same paragraph (last line)
-  const lines = startElement.text.split('\n')
-  const lastLine = lines.at(-1).trim()
-
-  if (STRUCTURE_PATTERNS[endType].test(lastLine)) {
-    // End marker is in the same paragraph
-    return startElement
-  }
-
-  // Otherwise look for end marker in next paragraphs
-  for (let i = startIndex + 1; i < elements.length; i++) {
-    if (elements[i].type === endType) {
-      return elements[i]
-    }
-  }
-
-  return null
-}
-
-/**
- * Get the end marker type for a start element
- */
-function getEndMarkerType(startType) {
-  switch (startType) {
-    case 'letterhead':
-    case 'signatureBlock':
-    case 'header':
-    case 'footer':
-    case 'contactInfo':
-      return 'directiveEnd'
-    case 'sectionBreak':
-      return 'sectionEnd'
-    case 'pageBreak':
-      return 'directiveEnd'
-    default:
-      return null
-  }
-}
-
-/**
- * Create document structure element
- */
-function createDocumentElement(startElement, endElement) {
-  const { type } = startElement
-
-  switch (type) {
-    case 'pageBreak':
-      createPageBreak(startElement, endElement)
-      break
-
-    case 'letterhead':
-      createLetterhead(startElement, endElement)
-      break
-
-    case 'signatureBlock':
-      createSignatureBlock(startElement, endElement)
-      break
-
-    case 'header':
-      createHeader(startElement, endElement)
-      break
-
-    case 'footer':
-      createFooter(startElement, endElement)
-      break
-
-    case 'contactInfo':
-      createContactInfo(startElement, endElement)
-      break
-
-    case 'sectionBreak':
-      createSectionBreak(startElement, endElement)
-      break
-  }
-}
-
-/**
- * Create page break element
- */
-function createPageBreak(startElement, endElement) {
-  // Replace with pandoc-compatible page break
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: '\\newpage',
-  }
-
-  if (endElement && endElement !== startElement) {
-    endElement.parent.children.splice(endElement.index, 1)
-  }
-}
-
-/**
- * Create letterhead block
- */
-function createLetterhead(startElement, endElement) {
-  if (!endElement) return
-
-  const content = extractContent(startElement, endElement)
-
-  // Create letterhead block for pandoc/LaTeX processing
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: `\\begin{letterhead}\n${content}\n\\end{letterhead}`,
-  }
-
-  // Remove processed content and end marker
-  removeContentRange(startElement, endElement)
-}
-
-/**
- * Create signature block
- */
-function createSignatureBlock(startElement, endElement) {
-  if (!endElement) return
-
-  const content = extractContent(startElement, endElement)
-
-  // Create signature block for document processing
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: `\\begin{signature}\n${content}\n\\end{signature}`,
-  }
-
-  removeContentRange(startElement, endElement)
-}
-
-/**
- * Create header block
- */
-function createHeader(startElement, endElement) {
-  if (!endElement) return
-
-  const content = extractContent(startElement, endElement)
-
-  // Create header for document processing
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: `\\begin{header}\n${content}\n\\end{header}`,
-  }
-
-  removeContentRange(startElement, endElement)
-}
-
-/**
- * Create footer block
- */
-function createFooter(startElement, endElement) {
-  if (!endElement) return
-
-  const content = extractContent(startElement, endElement)
-
-  // Create footer for document processing
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: `\\begin{footer}\n${content}\n\\end{footer}`,
-  }
-
-  removeContentRange(startElement, endElement)
-}
-
-/**
- * Create contact info block
- */
-function createContactInfo(startElement, endElement) {
-  if (!endElement) return
-
-  const content = extractContent(startElement, endElement)
-
-  // Create contact info block for business documents
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: `\\begin{contactinfo}\n${content}\n\\end{contactinfo}`,
-  }
-
-  removeContentRange(startElement, endElement)
-}
-
-/**
- * Create section break
- */
-function createSectionBreak(startElement, endElement) {
-  // Simple section break marker
-  startElement.parent.children[startElement.index] = {
-    type: 'html',
-    value: '\\sectionbreak',
-  }
-
-  if (endElement && endElement !== startElement) {
-    endElement.parent.children.splice(endElement.index, 1)
-  }
-}
-
-/**
- * Extract content between start and end elements
- */
-function extractContent(startElement, endElement) {
-  // If start and end are in the same text node (common case)
-  if (startElement.index === endElement.index) {
-    const { text } = startElement
-    const lines = text.split('\n')
-    // Remove first line (::directive) and last line (::)
-    const contentLines = lines.slice(1, -1)
-    return contentLines.join('\n')
-  }
-
-  // Otherwise extract from separate paragraphs
-  const { parent } = startElement
-  const startIndex = startElement.index + 1
-  const endIndex = endElement.index
-
-  const contentNodes = parent.children.slice(startIndex, endIndex)
-
-  // Convert content nodes to text, preserving structure
-  const parts = []
-  for (const node of contentNodes) {
-    const text = nodeToText(node)
-    if (text) {
-      parts.push(text)
-    }
-  }
-
-  // If end element has content before the :: marker, include it
-  if (endElement.text) {
-    const lines = endElement.text.split('\n')
-    const lastLineIndex = lines.length - 1
-    if (lines[lastLineIndex].trim() === '::') {
-      // Remove the :: line and add remaining content
-      const endContent = lines.slice(0, lastLineIndex).join('\n').trim()
-      if (endContent) {
-        parts.push(endContent)
+    const text = nodeText(node).trim()
+    if (/^::page-break(?:\s*::)?$/u.test(text)) {
+      output.push(pageBreakNode())
+      if (text === '::page-break' && nodeText(input[index + 1] ?? {}).trim() === '::') {
+        index++
       }
+      continue
     }
-  }
-
-  // Join with double newlines to preserve paragraph breaks
-  return parts.join('\n\n')
-}
-
-/**
- * Convert AST node to text
- */
-function nodeToText(node) {
-  switch (node.type) {
-    case 'paragraph':
-      return node.children.map((child) => child.value ?? '').join('')
-    case 'heading':
-      return node.children.map((child) => child.value ?? '').join('')
-    case 'text':
-      return node.value
-    default:
-      return ''
-  }
-}
-
-/**
- * Remove content range between start and end elements
- */
-function removeContentRange(startElement, endElement) {
-  const { parent } = startElement
-
-  // If end marker is in a paragraph with content, just strip the :: from it
-  if (endElement.text && endElement.text.trim().endsWith('::')) {
-    const lines = endElement.text.split('\n')
-    const lastLine = lines.at(-1).trim()
-
-    if (lastLine === '::') {
-      // Remove just the :: line from the end element's text
-
-      // Update the node's text children
-      const textChild = endElement.node.children.find(
-        (c) => c.type === 'text' && c.value.includes('::'),
-      )
-      if (textChild) {
-        textChild.value = textChild.value.replace(/\n?::$/m, '')
+    if (/^:::\s*section-break(?:\s*:::)?$/u.test(text)) {
+      output.push(sectionBreakNode())
+      if (text === '::: section-break' && nodeText(input[index + 1] ?? {}).trim() === ':::') {
+        index++
       }
+      continue
+    }
+
+    const firstLine = nodeText(node).split(/\r?\n/u)[0].trim()
+    const opener = firstLine.match(/^::([a-z][a-z0-9-]*)$/u)
+    const className = opener ? BLOCK_DIRECTIVES.get(opener[1]) : null
+    if (!opener || !className) {
+      output.push(node)
+      continue
+    }
+
+    const directive = opener[1]
+    const children = []
+    const openingContent = cloneWithoutOpeningMarker(node, directive)
+    const opensAndCloses = nodeText(openingContent).trimEnd().endsWith('::')
+    if (opensAndCloses) {
+      pushUnlessEmpty(children, cloneWithoutEndMarker(openingContent))
+      output.push(semanticContainer(className, children))
+      continue
+    }
+    pushUnlessEmpty(children, openingContent)
+
+    let closed = false
+    for (let cursor = index + 1; cursor < input.length; cursor++) {
+      const contentNode = input[cursor]
+      const contentText = nodeText(contentNode).trimEnd()
+      if (contentNode.type === 'paragraph' && contentText.endsWith('::')) {
+        pushUnlessEmpty(children, cloneWithoutEndMarker(contentNode))
+        index = cursor
+        closed = true
+        break
+      }
+      children.push(contentNode)
+    }
+
+    if (closed) {
+      output.push(semanticContainer(className, children))
+    } else {
+      // Validation reports the missing terminator. Keep the original source AST
+      // visible rather than consuming the remainder of the document.
+      output.push(node)
     }
   }
 
-  const startIndex = startElement.index + 1
-  const endIndex = endElement.index + 1
-
-  // Remove content nodes and end marker
-  parent.children.splice(startIndex, endIndex - startIndex)
+  tree.children = output
 }
 
-/**
- * Process semantic class annotations
- */
 function processSemanticClasses(tree) {
-  visit(tree, 'heading', (node) => {
-    if (!node.children?.[0]?.value) return
-
-    const text = node.children[0].value
-    const classMatch = text.match(/^(.*?)\s*\{\.([^}]+)\}$/)
-
-    if (classMatch) {
-      const [, title, className] = classMatch
-
-      // Update heading text
-      node.children[0].value = title.trim()
-
-      // Add semantic class for document processing
-      node.data ??= {}
-      node.data.hProperties ??= {}
-
-      // Store semantic class for pandoc processing
-      node.data.hProperties.className = [className]
-
-      // Add LaTeX class for professional output
-      node.data.hName ??= 'section'
+  visit(tree, ['heading', 'paragraph'], (node) => {
+    const leaves = textLeaves(node)
+    const last = leaves.at(-1)
+    if (!last?.value) {
+      return
     }
-  })
 
-  // Process semantic classes in paragraphs
-  visit(tree, 'paragraph', (node) => {
-    if (!node.children?.length) return
-
-    const lastChild = node.children.at(-1)
-    if (!lastChild.value) return
-
-    const classMatch = lastChild.value.match(/^(.*?)\s*\{\.([^}]+)\}$/)
-
-    if (classMatch) {
-      const [, text, className] = classMatch
-
-      // Update text content
-      lastChild.value = text.trim()
-
-      // Add semantic class
-      node.data ??= {}
-      node.data.hProperties ??= {}
-
-      node.data.hProperties.className = [className]
+    const classMatch = last.value.match(/^(.*?)\s*\{\.([^}]+)\}\s*$/u)
+    if (!classMatch) {
+      return
     }
+
+    const [, text, className] = classMatch
+    last.value = text.trimEnd()
+    node.data ??= {}
+    node.data.hProperties ??= {}
+    node.data.hProperties.className = [className]
   })
 }
 
-/**
- * Check if node has document structure element
- */
 export function hasDocumentStructure(tree) {
   let hasStructure = false
-
   visit(tree, 'paragraph', (node) => {
-    if (!node.children?.[0]?.value) return
-
-    const text = node.children[0].value.trim()
-
-    for (const pattern of Object.values(STRUCTURE_PATTERNS)) {
-      if (pattern.test(text)) {
-        hasStructure = true
-        return false // Stop visiting
-      }
+    const text = nodeText(node).trim()
+    if (/^::(?:letterhead|signature-block|header|footer|contact-info|page-break)\b/u.test(text)) {
+      hasStructure = true
+    }
+    if (/^:::\s*section-break\b/u.test(text)) {
+      hasStructure = true
     }
   })
-
   return hasStructure
 }

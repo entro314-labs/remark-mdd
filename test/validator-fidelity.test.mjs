@@ -98,6 +98,21 @@ Page
   assert.ok(result.errors.some((e) => e.code === 'INVALID_DIRECTIVE_NESTING'))
 })
 
+test('unknown block and self-closing directives are errors', () => {
+  for (const directive of ['::page-brek ::', '::letterhed']) {
+    const result = validateDocument(`${BASE}\n${directive}\n`)
+    assert.ok(
+      result.errors.some((error) => error.code === 'UNKNOWN_DIRECTIVE'),
+      `${directive} must not bypass directive validation`,
+    )
+  }
+})
+
+test('directive-looking text inside a code fence is not an unknown directive', () => {
+  const result = validateDocument(`${BASE}\n\`\`\`mdd\n::page-brek ::\n\`\`\`\n`)
+  assert.ok(!result.errors.some((error) => error.code === 'UNKNOWN_DIRECTIVE'))
+})
+
 test('F6: INVALID_SEMANTIC_CLASS for malformed class vs UNKNOWN for well-formed', () => {
   const malformed = validateSemanticClasses('Heading {.Not Valid}')
   assert.ok(malformed.errors.some((e) => e.code === 'INVALID_SEMANTIC_CLASS'))
