@@ -16,10 +16,6 @@ All notable changes to @markdownkit/remark-mdd.
 - **Directive end marker must be on its own line.** The renderer closed a directive on any paragraph ending in `::` while the validator only accepts a lone `::` line; both now agree.
 - Type declarations (`types/mdd.d.ts`) match the runtime: `validateDocument` option names (`validateFrontmatterFlag`, …), `ValidationResult` fields, and directive container nodes; stale LaTeX-marker and unimplemented plugin-option types removed.
 
-### Changed
-
-- **All headings are numbered, title classes included.** `# INVOICE {.invoice-title}` renders as `1 INVOICE` with id `section-1`, and the validator resolves `@section-N` references against that same numbering. Removed exports: `TITLE_CLASSES`.
-
 ### Removed
 
 - `./plugin-validator`: an unused second copy of the semantic-class list and nesting rules that had drifted from the JSON Schema; `./validator` is the single rule implementation.
