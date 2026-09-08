@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { remark } from 'remark'
+import remarkGfm from 'remark-gfm'
 
 import remarkMddDocumentStructure from '../plugins/remark-mdd-document-structure.js'
 import remarkMddTextFormatting from '../plugins/remark-mdd-text-formatting.js'
@@ -84,4 +85,28 @@ After
   assert.equal(container.children[0].children[0].value, 'Office hours: 9::30')
   assert.equal(container.children[1].children[0].value, 'Second paragraph')
   assert.equal(after.children[0].value, 'After')
+})
+
+test('title-class headings are not numbered and do not consume a section counter', async () => {
+  const tree = await transform('# INVOICE {.invoice-title}\n\n## Services\n\n## Payment\n', {
+    plugins: [remarkMddDocumentStructure, remarkMddTextFormatting],
+  })
+  const [title, services, payment] = tree.children
+  assert.equal(title.children[0].value, 'INVOICE')
+  assert.equal(title.data.hProperties.id, 'invoice')
+  assert.equal(services.children[0].value, '1 Services')
+  assert.equal(services.data.hProperties.id, 'section-1')
+  assert.equal(payment.children[0].value, '2 Payment')
+})
+
+test('tables and images receive table-N / figure-N anchors that @refs link to', async () => {
+  const tree = await transform(
+    '| A | B |\n| - | - |\n| 1 | 2 |\n\n![Chart](chart.png)\n\nSee @table-1 and @figure-1.\n',
+    { plugins: [remarkGfm, remarkMddDocumentStructure, remarkMddTextFormatting] },
+  )
+  const [table, figure, paragraph] = tree.children
+  assert.equal(table.data.hProperties.id, 'table-1')
+  assert.equal(figure.children[0].data.hProperties.id, 'figure-1')
+  const links = paragraph.children.filter((child) => child.type === 'link').map((link) => link.url)
+  assert.deepEqual(links, ['#table-1', '#figure-1'])
 })

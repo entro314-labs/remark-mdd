@@ -167,7 +167,6 @@ import remarkMddTextFormatting from '@markdownkit/remark-mdd/plugins/text-format
 
 // Validation
 import { validateDocument } from '@markdownkit/remark-mdd/validator';
-import { validateDirectiveEndMarker } from '@markdownkit/remark-mdd/plugin-validator';
 
 // Schema
 import schema from '@markdownkit/remark-mdd/schema';

@@ -183,3 +183,20 @@ Body text.
   const result = validateDocument(doc)
   assert.equal(result.valid, true, JSON.stringify(result.errors))
 })
+
+test('references resolve against the same numbering the renderer applies to title headings', () => {
+  const doc = '# INVOICE {.invoice-title}\n\n## Services\n\nSee @section-1 and @section-2.\n'
+  const result = validateReferences(doc)
+  const broken = result.warnings.map((warning) => warning.message)
+  assert.equal(broken.length, 1, broken.join('; '))
+  assert.match(broken[0], /@section-2/u)
+})
+
+test('@table-N and @figure-N references are checked against tables and images in order', () => {
+  const doc =
+    '# Data\n\n| A |\n| - |\n| 1 |\n\n![Chart](c.png)\n\nSee @table-1, @figure-1, @table-2 and @figure-3.\n'
+  const broken = validateReferences(doc).warnings.map((warning) => warning.message)
+  assert.equal(broken.length, 2, broken.join('; '))
+  assert.match(broken[0], /@table-2/u)
+  assert.match(broken[1], /@figure-3/u)
+})

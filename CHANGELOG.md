@@ -12,6 +12,7 @@ All notable changes to @markdownkit/remark-mdd.
 
 ### Removed
 
+- `./plugin-validator`: an unused second copy of the semantic-class list and nesting rules that had drifted from the JSON Schema; `./validator` is the single rule implementation.
 - `remark-mdx-conditional` (and the optional `remark-mdx` peer dependency). It invoked `remark-mdx` as a transformer, which cannot work (remark-mdx is a parser extension and must be attached before parsing); per-file MDX selection lives in markdownkit's processor factory.
 
 ## [2.2.3] - 2026-06-18

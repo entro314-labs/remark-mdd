@@ -44,7 +44,6 @@
     "./plugins/document-structure": "./plugins/remark-mdd-document-structure.js",
     "./plugins/text-formatting": "./plugins/remark-mdd-text-formatting.js",
     "./validator": "./lib/validator.js",
-    "./plugin-validator": "./lib/plugin-validator.js",
     "./schema": "./schema/mdd-document.schema.json",
     "./schema/requirements": "./schema/document-type-requirements.json",
     "./types": "./types/mdd.d.ts"
@@ -73,7 +72,8 @@
     "@entro314labs/release-kit": "^1.0.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
-    "oxlint-tsgolint": "^7.0.2001"
+    "oxlint-tsgolint": "^7.0.2001",
+    "remark-gfm": "^4.0.1"
   },
   "peerDependencies": {
     "remark": "^15.0.1"

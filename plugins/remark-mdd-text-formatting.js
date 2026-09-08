@@ -9,7 +9,8 @@
  * - Subscripts: text~sub~ → <sub>sub</sub> (for chemical formulas, mathematical notation)
  *
  * Document structure:
- * - Internal references: @section-1 → auto-linked section references
+ * - Internal references: @section-1 / @table-1 / @figure-1 → auto-linked references
+ *   (tables and images receive `table-N` / `figure-N` ids in document order)
  * - Automatic section numbering: 1, 1.1, 1.1.1 for H1-H3 headings
  * - Legal clause detection: WHEREAS, THEREFORE, etc. with semantic classes
  * - Long paragraph detection: Identifies lengthy text blocks for styling
@@ -59,7 +60,33 @@ export default function remarkMddTextFormatting() {
 
     // Process paragraph structure
     processParagraphStructure(tree)
+
+    // Anchor tables and figures so @table-N / @figure-N references resolve
+    processReferenceTargets(tree)
   }
+}
+
+/**
+ * Give every table and image an id in document order (`table-1`, `figure-1`,
+ * …) so `@table-N`/`@figure-N` links have a target. The validator mirrors this
+ * numbering when it checks references.
+ */
+function processReferenceTargets(tree) {
+  let tableCount = 0
+  visit(tree, 'table', (node) => {
+    tableCount++
+    node.data ??= {}
+    node.data.hProperties ??= {}
+    node.data.hProperties.id = `table-${tableCount}`
+  })
+
+  let figureCount = 0
+  visit(tree, 'image', (node) => {
+    figureCount++
+    node.data ??= {}
+    node.data.hProperties ??= {}
+    node.data.hProperties.id = `figure-${figureCount}`
+  })
 }
 
 function transformTextNodes(node) {
@@ -241,6 +268,18 @@ function createFormattedNode(formatMatch) {
 }
 
 /**
+ * Semantic classes that mark a heading as the document's title rather than a
+ * numbered section. Title headings are never numbered and do not advance the
+ * section counters, so "# INVOICE {.invoice-title}" stays "INVOICE".
+ */
+export const TITLE_CLASSES = new Set(['invoice-title', 'contract-title'])
+
+function isTitleHeading(node) {
+  const classes = node.data?.hProperties?.className ?? []
+  return classes.some((className) => TITLE_CLASSES.has(className))
+}
+
+/**
  * Process heading structure and add proper hierarchy
  */
 function processHeadingStructure(tree) {
@@ -248,6 +287,14 @@ function processHeadingStructure(tree) {
 
   visit(tree, 'heading', (node) => {
     const level = node.depth
+
+    if (isTitleHeading(node)) {
+      const text = node.children?.[0]?.value
+      if (text) {
+        node.data.hProperties.id = generateHeadingId(text, level, [0, 0, 0, 0, 0, 0])
+      }
+      return
+    }
 
     // Increment this level's counter and reset all deeper levels.
     for (let i = level - 1; i < sectionCounters.length; i++) {
