@@ -4,8 +4,8 @@
  * @see https://github.com/mdd-spec/mdd
  */
 
-import type { Root, Content, Heading, Paragraph, Text } from 'mdast'
-import type { Node, Parent, Literal } from 'unist'
+import type { Root, Heading, Paragraph, Text } from 'mdast'
+import type { Parent } from 'unist'
 
 /**
  * Valid MDD directive types
@@ -261,10 +261,10 @@ export interface ValidationError {
 }
 
 /**
- * Validation result
+ * Validation result returned by `validateDocument()`
  */
 export interface ValidationResult {
-  /** Whether document is valid */
+  /** Whether document is valid (no errors; in strict mode also no warnings) */
   valid: boolean
 
   /** Validation errors */
@@ -273,8 +273,14 @@ export interface ValidationResult {
   /** Validation warnings */
   warnings: ValidationError[]
 
-  /** Informational messages */
-  info?: ValidationError[]
+  /** Parsed frontmatter mapping, or null when absent/malformed */
+  frontmatter: Record<string, unknown> | null
+
+  /** Directives found in the document body */
+  directives: DirectiveOccurrence[]
+
+  /** Occurrence count per directive type */
+  directiveCounts: Partial<Record<DirectiveType, number>>
 }
 
 /**
@@ -364,67 +370,32 @@ export interface MDDDocument {
 }
 
 /**
- * Plugin options for remark-mdd-document-structure
+ * Semantic container emitted by remark-mdd-document-structure for a block
+ * directive. The mdast node type is `blockquote` (so nested Markdown is
+ * preserved); `data.hName`/`hProperties` render it as a classed `<div>`.
  */
-export interface MDDDocumentStructureOptions {
-  /** Whether to validate directive nesting */
-  validateNesting?: boolean
-
-  /** Whether to allow multiple occurrences of directives */
-  allowMultiple?: boolean
-
-  /** Custom directive patterns */
-  customDirectives?: Record<string, RegExp>
-
-  /** Strict mode - fail on warnings */
-  strict?: boolean
-}
-
-/**
- * Plugin options for remark-mdd-text-formatting
- */
-export interface MDDTextFormattingOptions {
-  /** Whether to auto-number sections */
-  autoNumberSections?: boolean
-
-  /** Whether to detect legal clauses */
-  detectLegalClauses?: boolean
-
-  /** Whether to validate cross-references */
-  validateReferences?: boolean
-
-  /** Custom formatting patterns */
-  customPatterns?: Record<string, RegExp>
-}
-
-/**
- * Section counter state (used by text formatting plugin)
- */
-export interface SectionCounter {
-  /** H1 counter */
-  h1: number
-
-  /** H2 counter */
-  h2: number
-
-  /** H3 counter */
-  h3: number
-
-  /** Current section ID */
-  currentId?: string
-}
-
-/**
- * Extended mdast HTML node for LaTeX markers
- */
-export interface LaTeXMarker extends Literal {
-  type: 'html'
-  value: string
-  data?: {
-    directive?: DirectiveType
-    content?: string
+export interface MDDDirectiveContainer extends Parent {
+  type: 'blockquote'
+  data: {
+    hName: 'div'
+    hProperties: {
+      className: [DirectiveContainerClass]
+      'data-mdd-directive': DirectiveContainerClass
+    }
   }
 }
+
+/**
+ * CSS class (and `data-mdd-directive` value) of a rendered directive container
+ */
+export type DirectiveContainerClass =
+  | 'letterhead'
+  | 'signature'
+  | 'header'
+  | 'footer'
+  | 'contactinfo'
+  | 'page-break'
+  | 'section-break'
 
 /**
  * Extended mdast nodes with MDD-specific data
@@ -456,83 +427,35 @@ export interface MDDText extends Text {
 }
 
 /**
- * Validator function signature
- */
-export type ValidatorFunction = (
-  document: MDDDocument,
-  requirements?: DocumentTypeRequirements,
-) => ValidationResult
-
-/**
- * Directive processor function signature
- */
-export type DirectiveProcessor = (
-  node: Paragraph,
-  index: number,
-  parent: Parent,
-) => LaTeXMarker | null
-
-/**
- * Pattern match result from document structure plugin
- */
-export interface DirectiveMatch {
-  /** Directive type */
-  type: DirectiveType
-
-  /** AST node reference */
-  node: Paragraph
-
-  /** Index in parent.children */
-  index: number
-
-  /** Parent node */
-  parent: Parent
-
-  /** Matched text content */
-  text: string
-}
-
-/**
- * MDD validation options
+ * Options accepted by `validateDocument(content, options)`.
+ * Every flag defaults to `true` except `strict`.
  */
 export interface MDDValidationOptions {
-  /** Validate frontmatter schema */
-  validateFrontmatter?: boolean
+  /** Validate frontmatter presence, required fields, formats and JSON Schema */
+  validateFrontmatterFlag?: boolean
 
-  /** Validate directive structure */
-  validateDirectives?: boolean
+  /** Validate directive structure (end markers, nesting, unknown directives) */
+  validateDirectivesFlag?: boolean
 
-  /** Validate cross-references */
-  validateReferences?: boolean
+  /** Validate document-type requirements (required/recommended directives and metadata) */
+  validateRequirementsFlag?: boolean
 
-  /** Validate document type requirements */
-  validateRequirements?: boolean
+  /** Validate semantic classes, typography patterns and `@section-N` references */
+  validateClassesFlag?: boolean
 
-  /** Fail on warnings */
+  /** Treat warnings as errors when computing `valid` */
   strict?: boolean
-
-  /** Include informational messages */
-  includeInfo?: boolean
 }
 
 /**
- * Preview renderer options
+ * Options accepted by `@markdownkit/mdd/preview` `generateMddHtml(content, options)`
  */
 export interface PreviewOptions {
-  /** Output file path (default: input.html) */
-  output?: string
+  /** Path used to select `.mdd` processing (defaults to `preview.mdd`) */
+  filePath?: string
 
-  /** Include validation report in HTML */
-  includeValidation?: boolean
-
-  /** Custom CSS path */
-  customCSS?: string
-
-  /** Validate before rendering */
+  /** Compute and embed the validation report (default true) */
   validate?: boolean
-
-  /** Fail on validation errors */
-  failOnError?: boolean
 }
 
 /**
