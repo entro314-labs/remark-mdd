@@ -7,7 +7,10 @@ import remarkMddDocumentStructure from '../plugins/remark-mdd-document-structure
 import remarkMddTextFormatting from '../plugins/remark-mdd-text-formatting.js'
 
 async function transform(markdown, plugin) {
-  const processor = remark().use(plugin)
+  let processor = remark()
+  for (const item of plugin.plugins ?? [plugin]) {
+    processor = processor.use(item)
+  }
   const tree = processor.parse(markdown)
   return processor.run(tree, { path: 'document.mdd' })
 }
@@ -50,4 +53,35 @@ test('standalone typography tokens are transformed', async () => {
 
   const quote = await transform('"hello"\n', remarkMddTextFormatting)
   assert.equal(quote.children[0].children[0].value, '“hello”')
+})
+
+test('derived paragraph classes are added to, not substituted for, an explicit semantic class', async () => {
+  const longText = 'Important legal text. '.repeat(12).trim()
+  const tree = await transform(`${longText} {.legal-notice}\n`, {
+    plugins: [remarkMddDocumentStructure, remarkMddTextFormatting],
+  })
+  const paragraph = tree.children[0]
+  assert.deepEqual(paragraph.data.hProperties.className, ['legal-notice', 'long-paragraph'])
+})
+
+test('a directive closes only on a `::` line of its own, as the validator requires', async () => {
+  const tree = await transform(
+    `::letterhead
+Office hours: 9::30
+
+Second paragraph
+::
+
+After
+`,
+    remarkMddDocumentStructure,
+  )
+
+  assert.equal(tree.children.length, 2)
+  const [container, after] = tree.children
+  assert.equal(container.data.hProperties['data-mdd-directive'], 'letterhead')
+  assert.equal(container.children.length, 2)
+  assert.equal(container.children[0].children[0].value, 'Office hours: 9::30')
+  assert.equal(container.children[1].children[0].value, 'Second paragraph')
+  assert.equal(after.children[0].value, 'After')
 })

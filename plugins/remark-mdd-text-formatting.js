@@ -306,17 +306,26 @@ function generateHeadingId(text, level, counters) {
 }
 
 /**
+ * Add a class to a node's hProperties without discarding classes that were
+ * already assigned (for example an author-supplied `{.legal-notice}` annotation
+ * applied by the document-structure plugin).
+ */
+function addClassName(node, className) {
+  node.data ??= {}
+  node.data.hProperties ??= {}
+  const existing = node.data.hProperties.className ?? []
+  if (!existing.includes(className)) {
+    node.data.hProperties.className = [...existing, className]
+  }
+}
+
+/**
  * Process paragraph structure for better document flow
  */
 function processParagraphStructure(tree) {
   visit(tree, 'paragraph', (node) => {
     if (!node.children?.length) return
 
-    // Add proper paragraph spacing classes based on context
-    node.data ??= {}
-    node.data.hProperties ??= {}
-
-    // Check if paragraph follows a heading
     const text = node.children
       .map(
         (child) =>
@@ -324,18 +333,19 @@ function processParagraphStructure(tree) {
       )
       .join('')
 
-    // Add semantic classes for different paragraph types
+    // Derived classes are additive: a paragraph can be both long and a legal
+    // clause, and neither must clobber an explicit semantic class annotation.
     if (text.length > 200) {
-      node.data.hProperties.className = ['long-paragraph']
+      addClassName(node, 'long-paragraph')
     }
 
     // Identify legal/formal text patterns
     if (/^(WHEREAS|THEREFORE|PROVIDED|SUBJECT TO)/i.test(text)) {
-      node.data.hProperties.className = ['legal-clause']
+      addClassName(node, 'legal-clause')
     }
 
     if (/^\d+\.\s/.test(text)) {
-      node.data.hProperties.className = ['numbered-item']
+      addClassName(node, 'numbered-item')
     }
   })
 }

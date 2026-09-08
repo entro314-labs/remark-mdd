@@ -64,6 +64,15 @@ function cloneWithoutOpeningMarker(node, directive) {
   return clone
 }
 
+/**
+ * A paragraph closes a directive only when its final line is exactly `::`.
+ * This mirrors the validator, which recognises an end marker solely on its own
+ * line; text that merely ends in `::` (e.g. `Time: 10::`) is directive content.
+ */
+function closesDirective(node) {
+  return /(?:^|\r?\n)::\s*$/u.test(nodeText(node).trimEnd())
+}
+
 function cloneWithoutEndMarker(node, marker = '::') {
   const clone = structuredClone(node)
   const leaves = textLeaves(clone)
@@ -154,8 +163,7 @@ function processDocumentStructure(tree) {
     const directive = opener[1]
     const children = []
     const openingContent = cloneWithoutOpeningMarker(node, directive)
-    const opensAndCloses = nodeText(openingContent).trimEnd().endsWith('::')
-    if (opensAndCloses) {
+    if (closesDirective(openingContent)) {
       pushUnlessEmpty(children, cloneWithoutEndMarker(openingContent))
       output.push(semanticContainer(className, children))
       continue
@@ -165,8 +173,7 @@ function processDocumentStructure(tree) {
     let closed = false
     for (let cursor = index + 1; cursor < input.length; cursor++) {
       const contentNode = input[cursor]
-      const contentText = nodeText(contentNode).trimEnd()
-      if (contentNode.type === 'paragraph' && contentText.endsWith('::')) {
+      if (contentNode.type === 'paragraph' && closesDirective(contentNode)) {
         pushUnlessEmpty(children, cloneWithoutEndMarker(contentNode))
         index = cursor
         closed = true
