@@ -4,6 +4,8 @@ All notable changes to @markdownkit/remark-mdd.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-08
+
 ### Added
 
 - **`@table-N` / `@figure-N` references resolve.** Tables and images receive `table-N` / `figure-N` ids in document order, and the validator checks those references against the same numbering.
