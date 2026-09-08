@@ -6,6 +6,7 @@ All notable changes to @markdownkit/remark-mdd.
 
 ### Added
 
+- **`@table-N` / `@figure-N` references resolve.** Tables and images receive `table-N` / `figure-N` ids in document order, and the validator checks those references against the same numbering.
 - **`DIRECTIVE_NOT_BLOCK_START` validation error.** A directive opener (`::header`, `::page-break ::`, …) must start a new Markdown block: the line above it has to be blank, a heading, a rule, or a fence delimiter. Otherwise the renderer sees the opener as paragraph text, so the validator now rejects what the renderer cannot render.
 - **`{{page}}` in HTML.** In `::header`/`::footer`, `{{page}}` renders as `<span class="page-number">1</span>` instead of the literal token; paged outputs (PDF, DOCX) keep replacing it with a live field.
 
