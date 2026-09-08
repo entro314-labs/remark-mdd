@@ -2,6 +2,18 @@
 
 All notable changes to @markdownkit/remark-mdd.
 
+## [Unreleased]
+
+### Fixed
+
+- **Derived paragraph classes no longer overwrite explicit ones.** `long-paragraph`, `legal-clause` and `numbered-item` are appended to an author's `{.class}` annotation instead of replacing it.
+- **Directive end marker must be on its own line.** The renderer closed a directive on any paragraph ending in `::` while the validator only accepts a lone `::` line; both now agree.
+- Type declarations (`types/mdd.d.ts`) match the runtime: `validateDocument` option names (`validateFrontmatterFlag`, …), `ValidationResult` fields, and directive container nodes; stale LaTeX-marker and unimplemented plugin-option types removed.
+
+### Removed
+
+- `remark-mdx-conditional` (and the optional `remark-mdx` peer dependency). It invoked `remark-mdx` as a transformer, which cannot work (remark-mdx is a parser extension and must be attached before parsing); per-file MDX selection lives in markdownkit's processor factory.
+
 ## [2.2.3] - 2026-06-18
 
 ### Fixed

@@ -65,7 +65,6 @@ console.log(String(result));
 import {
   remarkMddDocumentStructure,
   remarkMddTextFormatting,
-  remarkMdxConditional,
 } from "@markdownkit/remark-mdd";
 ```
 
@@ -154,10 +153,6 @@ The total is $1,234^56^
 See @section-2 for details.
 ```
 
-### `remark-mdx-conditional`
-
-Conditional processing for MDX content (experimental).
-
 ## Exports
 
 The package provides multiple export paths for different use cases:
@@ -169,7 +164,6 @@ import * from '@markdownkit/remark-mdd';
 // Individual plugins
 import remarkMddDocumentStructure from '@markdownkit/remark-mdd/plugins/document-structure';
 import remarkMddTextFormatting from '@markdownkit/remark-mdd/plugins/text-formatting';
-import remarkMdxConditional from '@markdownkit/remark-mdd/plugins/mdx-conditional';
 
 // Validation
 import { validateDocument } from '@markdownkit/remark-mdd/validator';

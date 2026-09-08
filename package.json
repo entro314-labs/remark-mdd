@@ -43,7 +43,6 @@
     ".": "./index.js",
     "./plugins/document-structure": "./plugins/remark-mdd-document-structure.js",
     "./plugins/text-formatting": "./plugins/remark-mdd-text-formatting.js",
-    "./plugins/mdx-conditional": "./plugins/remark-mdx-conditional.js",
     "./validator": "./lib/validator.js",
     "./plugin-validator": "./lib/plugin-validator.js",
     "./schema": "./schema/mdd-document.schema.json",
@@ -61,7 +60,8 @@
     "check": "pnpm run format:check && pnpm run lint:ci",
     "test": "node --test",
     "verify:pack": "node scripts/verify-package.mjs",
-    "prepublishOnly": "pnpm run test && pnpm run verify:pack"
+    "prepublishOnly": "pnpm run test && pnpm run verify:pack",
+    "release": "release-kit"
   },
   "dependencies": {
     "ajv": "^8.20.0",
@@ -70,18 +70,13 @@
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
+    "@entro314labs/release-kit": "^1.0.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
     "oxlint-tsgolint": "^7.0.2001"
   },
   "peerDependencies": {
-    "remark": "^15.0.1",
-    "remark-mdx": "^3.0.0"
-  },
-  "peerDependenciesMeta": {
-    "remark-mdx": {
-      "optional": true
-    }
+    "remark": "^15.0.1"
   },
   "engines": {
     "node": ">=24.19.0"
