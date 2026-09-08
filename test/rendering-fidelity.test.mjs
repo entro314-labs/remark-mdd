@@ -87,16 +87,36 @@ After
   assert.equal(after.children[0].value, 'After')
 })
 
-test('title-class headings are not numbered and do not consume a section counter', async () => {
+test('every heading is numbered in document order, title classes included', async () => {
   const tree = await transform('# INVOICE {.invoice-title}\n\n## Services\n\n## Payment\n', {
     plugins: [remarkMddDocumentStructure, remarkMddTextFormatting],
   })
   const [title, services, payment] = tree.children
-  assert.equal(title.children[0].value, 'INVOICE')
-  assert.equal(title.data.hProperties.id, 'invoice')
-  assert.equal(services.children[0].value, '1 Services')
-  assert.equal(services.data.hProperties.id, 'section-1')
-  assert.equal(payment.children[0].value, '2 Payment')
+  assert.equal(title.children[0].value, '1 INVOICE')
+  assert.deepEqual(title.data.hProperties.className, ['invoice-title'])
+  assert.equal(title.data.hProperties.id, 'section-1')
+  assert.equal(services.children[0].value, '1.1 Services')
+  assert.equal(services.data.hProperties.id, 'section-1-1')
+  assert.equal(payment.children[0].value, '1.2 Payment')
+})
+
+test('{{page}} in ::header/::footer renders as a page-number span', async () => {
+  const tree = await transform(
+    '::header\nAcme | Page {{page}} of {{page}}\n::\n\n::letterhead\nSee {{page}}\n::\n',
+    remarkMddDocumentStructure,
+  )
+  const [header, letterhead] = tree.children
+  const nodes = header.children[0].children
+  assert.deepEqual(
+    nodes.map((node) => [node.type, node.value]),
+    [
+      ['text', 'Acme | Page '],
+      ['html', '<span class="page-number">1</span>'],
+      ['text', ' of '],
+      ['html', '<span class="page-number">1</span>'],
+    ],
+  )
+  assert.equal(letterhead.children[0].children[0].value, 'See {{page}}')
 })
 
 test('tables and images receive table-N / figure-N anchors that @refs link to', async () => {

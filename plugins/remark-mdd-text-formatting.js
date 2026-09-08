@@ -268,18 +268,6 @@ function createFormattedNode(formatMatch) {
 }
 
 /**
- * Semantic classes that mark a heading as the document's title rather than a
- * numbered section. Title headings are never numbered and do not advance the
- * section counters, so "# INVOICE {.invoice-title}" stays "INVOICE".
- */
-export const TITLE_CLASSES = new Set(['invoice-title', 'contract-title'])
-
-function isTitleHeading(node) {
-  const classes = node.data?.hProperties?.className ?? []
-  return classes.some((className) => TITLE_CLASSES.has(className))
-}
-
-/**
  * Process heading structure and add proper hierarchy
  */
 function processHeadingStructure(tree) {
@@ -287,14 +275,6 @@ function processHeadingStructure(tree) {
 
   visit(tree, 'heading', (node) => {
     const level = node.depth
-
-    if (isTitleHeading(node)) {
-      const text = node.children?.[0]?.value
-      if (text) {
-        node.data.hProperties.id = generateHeadingId(text, level, [0, 0, 0, 0, 0, 0])
-      }
-      return
-    }
 
     // Increment this level's counter and reset all deeper levels.
     for (let i = level - 1; i < sectionCounters.length; i++) {

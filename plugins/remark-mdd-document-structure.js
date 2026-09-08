@@ -90,7 +90,43 @@ function pushUnlessEmpty(nodes, node) {
   }
 }
 
+const PAGE_NUMBER_TOKEN = '{{page}}'
+const PAGE_NUMBER_NODE = { type: 'html', value: '<span class="page-number">1</span>' }
+
+/**
+ * HTML has no pages, so `{{page}}` in ::header/::footer renders as the first
+ * page's number inside a `.page-number` span. Paged output replaces the token
+ * with a live field instead (PDF furniture templates, DOCX PAGE fields).
+ */
+function expandPageNumberTokens(node) {
+  if (!Array.isArray(node.children)) {
+    return
+  }
+  node.children = node.children.flatMap((child) => {
+    if (child.type !== 'text' || !child.value.includes(PAGE_NUMBER_TOKEN)) {
+      expandPageNumberTokens(child)
+      return [child]
+    }
+    const parts = child.value.split(PAGE_NUMBER_TOKEN)
+    const nodes = []
+    parts.forEach((part, index) => {
+      if (part) {
+        nodes.push({ type: 'text', value: part })
+      }
+      if (index < parts.length - 1) {
+        nodes.push(structuredClone(PAGE_NUMBER_NODE))
+      }
+    })
+    return nodes
+  })
+}
+
 function semanticContainer(className, children) {
+  if (className === 'header' || className === 'footer') {
+    for (const child of children) {
+      expandPageNumberTokens(child)
+    }
+  }
   return {
     type: 'blockquote',
     children,

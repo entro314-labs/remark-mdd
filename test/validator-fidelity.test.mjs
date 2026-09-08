@@ -185,11 +185,36 @@ Body text.
 })
 
 test('references resolve against the same numbering the renderer applies to title headings', () => {
-  const doc = '# INVOICE {.invoice-title}\n\n## Services\n\nSee @section-1 and @section-2.\n'
+  const doc =
+    '# INVOICE {.invoice-title}\n\n## Services\n\nSee @section-1, @section-1-1 and @section-2.\n'
   const result = validateReferences(doc)
   const broken = result.warnings.map((warning) => warning.message)
   assert.equal(broken.length, 1, broken.join('; '))
   assert.match(broken[0], /@section-2/u)
+})
+
+test('a directive opener that does not start a new block is an error', () => {
+  const codes = (doc) => validateDocument(doc).errors.map((error) => error.code)
+  const header = 'title: "Test"\ndocument-type: "report"\n'
+  const frontmatter = `---\n${header}---\n`
+  assert.ok(
+    codes(`${frontmatter}Intro text\n::header\nAcme\n::\n`).includes('DIRECTIVE_NOT_BLOCK_START'),
+  )
+  assert.ok(
+    codes(`${frontmatter}\n::header\nAcme\n::\n::footer\nAcme\n::\n`).includes(
+      'DIRECTIVE_NOT_BLOCK_START',
+    ),
+  )
+  assert.ok(
+    codes(`${frontmatter}\n- item\n::page-break ::\n`).includes('DIRECTIVE_NOT_BLOCK_START'),
+  )
+  for (const valid of [
+    `${frontmatter}::header\nAcme\n::\n`,
+    `${frontmatter}\n# Title\n::header\nAcme\n::\n`,
+    `${frontmatter}\nText\n\n::header\nAcme\n::\n\n---\n::footer\nAcme\n::\n`,
+  ]) {
+    assert.ok(!codes(valid).includes('DIRECTIVE_NOT_BLOCK_START'), valid)
+  }
 })
 
 test('@table-N and @figure-N references are checked against tables and images in order', () => {
